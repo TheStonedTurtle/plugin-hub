@@ -116,6 +116,7 @@ if pwdIsEmpty:
 parser = argparse.ArgumentParser()
 parser.add_argument("--noninteractive", dest = "noninteractive", action='store_true')
 parser.add_argument("--output_directory", dest = "output_directory")
+parser.add_argument("--travis", dest = "travis_ci", action='store_true')
 for key, var in subs.items():
 	parser.add_argument("--" + key, dest = key, help = var["desc"])
 args = vars(parser.parse_args())
@@ -177,11 +178,16 @@ mappings["package_path"] = mappings["package"].replace(".", os.path.sep)
 with open(os.path.join(templatedir, "../runelite.version"), "rt") as fi:
 	mappings["runelite_version"] = fi.read().strip()
 
+travisFiles = [".travis.yml", "build-travis.gradle", "checkstyle.xml"]
+nonTravisFiles = ["build.gradle"]
+
 for root, dir, files in os.walk(templatedir):
 	for file in files:
+		if (file in travisFiles and not args["travis_ci"]) or (file in nonTravisFiles and args["travis_ci"]):
+			continue
 		try:
 			infi = os.path.join(root, file)
-			outfi = os.path.join(os.path.relpath(root, templatedir), file)
+			outfi = os.path.join(os.path.relpath(root, templatedir), "build.gradle" if file == "build-travis.gradle" else file)
 			outfi = outfi.replace("_(", "${").replace(")_", "}")
 			outfi = Template(outfi).substitute(mappings)
 			outfi = os.path.join(outdir, outfi)
